@@ -18,11 +18,27 @@ app = Flask(__name__)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def echo(content):
-    chat_id = content.message.chat.id
-    text = content.message.text.encode('utf-8').decode()
+def echo_message(recvd_message):
+    chat_id = recvd_message.chat.id
+    text = recvd_message.text.encode('utf-8').decode()
     logger.log(level=logging.INFO, msg=f'Got message:{text}')
     bot.sendMessage(chat_id=chat_id, text=text)
+
+def echo_photo(recvd_message):
+    chat_id = recvd_message.chat.id
+    photo_id = recvd_message.photo[0].file_id
+    logger.log(level=logging.INFO, msg=f'Got photo, by id:{photo_id}')
+    bot.sendPhoto(chat_id=chat_id, photo=photo_id, caption=recvd_message.caption)
+
+def echo_jpg_png(recvd_message):
+    chat_id = recvd_message.chat.id
+    file_name = recvd_message.document.file_name.lower()
+    if not file_name.endswith(('.jpg', '.png')):
+        logger.log(level=logging.INFO, msg=f'Got unsupported document')
+        bot.sendMessage(chat_id=chat_id, text='Unsupported picture file type')
+    else:
+        file_id = recvd_message.document.file_id
+        bot.sendDocument(chat_id=chat_id, document=file_id, caption=recvd_message.caption)
 
 @app.route(f'/{TOKEN}', methods=['POST'])
 def respond():
@@ -30,7 +46,11 @@ def respond():
     #здесь просматриваем контент и отвечаем
     if content.message:
         if content.message.text:
-            echo(content)
+            echo_message(content.message)
+        elif content.message.photo:
+            echo_photo(content.message)
+        elif content.message.document:
+            echo_jpg_png(content.message)
         else:
             logger.log(level=logging.CRITICAL, msg='Unsupported message type')
             bot.sendMessage(chat_id=content.message.chat.id, text='Unsupported message was sent')
