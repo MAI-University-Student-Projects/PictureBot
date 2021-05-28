@@ -1,5 +1,9 @@
+import os
+import requests
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackQueryHandler
+from PIL import Image, ImageFilter
 
 class Telegram_bot:
     def __init__(self, token):
@@ -26,15 +30,16 @@ class Telegram_bot:
         else:
             button_list = [
                 [
-                    InlineKeyboardButton("send last picture", callback_data='1')
+                    InlineKeyboardButton("Blur", callback_data='blur'),
+                    InlineKeyboardButton("Grayscale", callback_data='gray')
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(button_list)
             update.message.reply_text('Time to choose...', reply_markup=reply_markup)
             if update.message.photo:
-                self.chat_dict[chat_id] = [ 'photo' ,update.message.photo[0].file_id ]
+                self.chat_dict[chat_id] = {'type': 'photo', 'id': update.message.photo[0].file_id }
             else:
-                self.chat_dict[chat_id] = [ 'document', update.message.document.file_id ]
+                self.chat_dict[chat_id] = {'type': 'document', 'id': update.message.document.file_id}
 
     def handle_bot_start(self, update, context):
         chat_id = update.message.chat.id
@@ -45,13 +50,31 @@ class Telegram_bot:
         query = update.callback_query
         chat_id = query.message.chat.id
         query.answer()
-        reply = self.chat_dict[chat_id]
-        if reply[0] == 'photo':
-            query.message.reply_photo(photo=reply[1])
-        elif reply[0] == 'document':
-            query.message.reply_document(document=reply[1])
-        else:
-            query.message.reply_text(text='No photo in history')
+        try:
+            reply_pic = self.chat_dict[chat_id]
+            pic_info = self.updater.bot.get_file(file_id=reply_pic['id'])
+            img = Image.open(fp=requests.get(pic_info.file_path, stream=True).raw)#
+            if query.data == 'blur':
+                new_img = img.convert('RGB').filter(ImageFilter.GaussianBlur(radius=4))
+            else:
+                new_img = img.convert('LA')
+            new_img.save('img.png')
+            with open('img.png', 'rb') as f:
+                query.message.reply_photo(photo=f)
+            os.remove('img.png')
+            # img = plt.imread(pic_file_name)
+            # if query.data == 'blur':
+            #     img = ndimage.gaussian_filter(img, sigma=(2, 2, 0))
+            #     plt.imsave(fname=pic_file_name, arr=img)
+            # else:
+            #     #https://stackoverflow.com/questions/12201577/how-can-i-convert-an-rgb-image-into-grayscale-in-python
+            #     img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
+            #     plt.imsave(fname=pic_file_name, arr=img, cmap=plt.get_cmap('gray'))
+            # with open(pic_file_name, 'rb') as f:
+            #     query.message.reply_photo(photo=f)
+            # os.remove(pic_file_name)
+        except KeyError:
+            query.message.reply_text(text='No photo in button')
 
     def error_message(self, update, context):
         update.message.reply_text('Unsupported message type')
