@@ -62,17 +62,6 @@ class Telegram_bot:
             with open('img.png', 'rb') as f:
                 query.message.reply_photo(photo=f)
             os.remove('img.png')
-            # img = plt.imread(pic_file_name)
-            # if query.data == 'blur':
-            #     img = ndimage.gaussian_filter(img, sigma=(2, 2, 0))
-            #     plt.imsave(fname=pic_file_name, arr=img)
-            # else:
-            #     #https://stackoverflow.com/questions/12201577/how-can-i-convert-an-rgb-image-into-grayscale-in-python
-            #     img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
-            #     plt.imsave(fname=pic_file_name, arr=img, cmap=plt.get_cmap('gray'))
-            # with open(pic_file_name, 'rb') as f:
-            #     query.message.reply_photo(photo=f)
-            # os.remove(pic_file_name)
         except KeyError:
             query.message.reply_text(text='No photo in button')
 
